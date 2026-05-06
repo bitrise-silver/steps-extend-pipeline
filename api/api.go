@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 
 	"github.com/bitrise-io/go-utils/v2/log"
 	"github.com/bitrise-io/go-utils/v2/retryhttp"
@@ -23,7 +22,6 @@ type Client struct {
 // NewClient creates a Client for the given build. The HTTP client retries on
 // 5xx and transport errors; 4xx responses are passed through without retry.
 func NewClient(appURL, buildSlug, authToken string, logger log.Logger) Client {
-	fmt.Fprintf(os.Stdout, "\x1b[31;1mDebug: %s\x1b[0m\n", fmt.Sprintf("%s/pipeline/workflow_builds/%s/extend", appURL, buildSlug))
 	return Client{
 		httpClient: retryhttp.NewClient(logger).StandardClient(),
 		url:        fmt.Sprintf("%s/pipeline/workflow_builds/%s/extend", appURL, buildSlug),
