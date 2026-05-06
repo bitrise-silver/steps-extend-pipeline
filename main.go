@@ -6,13 +6,15 @@ import (
 
 	"github.com/bitrise-io/go-utils/v2/env"
 	"github.com/bitrise-io/go-utils/v2/log"
+	"github.com/bitrise-silver/steps-extend-pipeline/api"
 	"github.com/bitrise-silver/steps-extend-pipeline/step"
 )
 
 func main() {
 	logger := log.NewLogger()
-	envRepo := env.NewRepository()
-	s := step.New(logger, envRepo)
+	s := step.New(logger, env.NewRepository(), func(appURL, buildSlug, authToken string) step.PipelineExtender {
+		return api.NewClient(appURL, buildSlug, authToken, logger)
+	})
 
 	cfg, err := s.ProcessConfig()
 	if err != nil {
@@ -22,7 +24,7 @@ func main() {
 
 	result, err := s.Run(cfg)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "\x1b[31;1mFailed to run step: %s\x1b[0m\n", err)
+		fmt.Fprintf(os.Stderr, "\x1b[31;1m%s\x1b[0m\n", err)
 		os.Exit(1)
 	}
 

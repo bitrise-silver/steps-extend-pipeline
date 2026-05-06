@@ -3,11 +3,18 @@ package step
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/bitrise-io/go-steputils/v2/stepconf"
 	"github.com/bitrise-io/go-utils/v2/env"
 	"github.com/bitrise-io/go-utils/v2/log"
+	"github.com/bitrise-silver/steps-extend-pipeline/api"
 )
+
+// PipelineExtender is the interface for calling the Monolith extend endpoint.
+type PipelineExtender interface {
+	Extend(bitriseYML, pipelineName string) (api.ExtendResponse, error)
+}
 
 // Input holds raw inputs from the Bitrise environment.
 type Input struct {
@@ -19,9 +26,12 @@ type Input struct {
 
 // Config holds the validated and resolved step configuration.
 type Config struct {
-	Content      string
-	PipelineName string
-	IsDebug      bool
+	Content       string
+	PipelineName  string
+	AppURL        string
+	BuildSlug     string
+	BuildAPIToken string
+	IsDebug       bool
 }
 
 // Result holds step outputs (none for this step).
@@ -29,15 +39,18 @@ type Result struct{}
 
 // Step implements the extend-pipeline step logic.
 type Step struct {
-	logger  log.Logger
-	envRepo env.Repository
+	logger          log.Logger
+	envRepo         env.Repository
+	extenderFactory func(appURL, buildSlug, authToken string) PipelineExtender
 }
 
 // New creates a new Step with injected dependencies.
-func New(logger log.Logger, envRepo env.Repository) Step {
+// extenderFactory is called in Run with the resolved API credentials.
+func New(logger log.Logger, envRepo env.Repository, extenderFactory func(appURL, buildSlug, authToken string) PipelineExtender) Step {
 	return Step{
-		logger:  logger,
-		envRepo: envRepo,
+		logger:          logger,
+		envRepo:         envRepo,
+		extenderFactory: extenderFactory,
 	}
 }
 
@@ -66,17 +79,48 @@ func (s Step) ProcessConfig() (Config, error) {
 		content = string(data)
 	}
 
+	appURL := s.envRepo.Get("BITRISE_APP_URL")
+	if appURL == "" {
+		return Config{}, fmt.Errorf("BITRISE_APP_URL is not set")
+	}
+	buildSlug := s.envRepo.Get("BITRISE_BUILD_SLUG")
+	if buildSlug == "" {
+		return Config{}, fmt.Errorf("BITRISE_BUILD_SLUG is not set")
+	}
+	buildAPIToken := s.envRepo.Get("BITRISE_BUILD_API_TOKEN")
+	if buildAPIToken == "" {
+		return Config{}, fmt.Errorf("BITRISE_BUILD_API_TOKEN is not set")
+	}
+
 	return Config{
-		Content:      content,
-		PipelineName: input.PipelineName,
-		IsDebug:      input.IsDebug,
+		Content:       content,
+		PipelineName:  input.PipelineName,
+		AppURL:        appURL,
+		BuildSlug:     buildSlug,
+		BuildAPIToken: buildAPIToken,
+		IsDebug:       input.IsDebug,
 	}, nil
 }
 
-// Run executes the main step logic.
+// Run calls the Monolith extend endpoint and logs the resulting workflows.
 func (s Step) Run(cfg Config) (Result, error) {
 	s.logger.EnableDebugLog(cfg.IsDebug)
-	s.logger.Infof("%s", cfg.Content)
+
+	extender := s.extenderFactory(cfg.AppURL, cfg.BuildSlug, cfg.BuildAPIToken)
+	resp, err := extender.Extend(cfg.Content, cfg.PipelineName)
+	if err != nil {
+		return Result{}, err
+	}
+
+	s.logger.Donef("Pipeline extended with %d workflow(s):", len(resp.Workflows))
+	for _, wf := range resp.Workflows {
+		if len(wf.DependsOn) > 0 {
+			s.logger.Infof("  - %s (depends on: %s)", wf.Name, strings.Join(wf.DependsOn, ", "))
+		} else {
+			s.logger.Infof("  - %s", wf.Name)
+		}
+	}
+
 	return Result{}, nil
 }
 
