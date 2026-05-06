@@ -2,11 +2,15 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"time"
+
+	retryablehttp "github.com/hashicorp/go-retryablehttp"
 
 	"github.com/bitrise-io/go-utils/v2/log"
 	"github.com/bitrise-io/go-utils/v2/retryhttp"
@@ -19,14 +23,29 @@ type Client struct {
 	authToken  string
 }
 
-// NewClient creates a Client for the given build. The HTTP client retries on
-// 5xx and transport errors; 4xx responses are passed through without retry.
+// NewClient creates a Client for the given build.
+// Retry policy: 5xx and transport errors use library defaults; 409 Conflict is
+// retried up to 3 times with a fixed 500 ms delay between attempts.
 func NewClient(appURL, buildSlug, authToken string, logger log.Logger) Client {
+	rc := retryhttp.NewClient(logger)
+	rc.RetryMax = 3
+	rc.RetryWaitMin = 500 * time.Millisecond
+	rc.RetryWaitMax = 500 * time.Millisecond
+	rc.CheckRetry = retryOnConflict
+
 	return Client{
-		httpClient: retryhttp.NewClient(logger).StandardClient(),
+		httpClient: rc.StandardClient(),
 		url:        fmt.Sprintf("%s/pipeline/workflow_builds/%s/extend", appURL, buildSlug),
 		authToken:  authToken,
 	}
+}
+
+// retryOnConflict extends the default retry policy to also retry HTTP 409 responses.
+func retryOnConflict(ctx context.Context, resp *http.Response, err error) (bool, error) {
+	if resp != nil && resp.StatusCode == http.StatusConflict {
+		return true, nil
+	}
+	return retryablehttp.DefaultRetryPolicy(ctx, resp, err)
 }
 
 // ExtendRequest is the JSON body sent to the extend endpoint.
