@@ -1,0 +1,37 @@
+format_version: "11"
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+
+workflows:
+  check:
+    title: Run checks (lint, unit tests, stepman audit)
+    steps:
+    - git::https://github.com/bitrise-steplib/steps-check.git:
+        inputs:
+        - workflow: check
+
+  e2e:
+    title: Run end-to-end tests
+    steps:
+    - git::https://github.com/bitrise-steplib/steps-check.git:
+        inputs:
+        - workflow: e2e
+
+  sample:
+    title: Run step locally (not run on CI)
+    description: >
+      For local debugging only. Run with: bitrise run sample
+    steps:
+    - path::./:
+        title: Extend Pipeline (local)
+        inputs:
+        - content: "Hello from the sample workflow!"
+        - content_file_path: ""
+        - pipeline_name: ""
+        - is_debug: "true"
+
+  generate_readme:
+    title: Regenerate README from step.yml
+    steps:
+    - git::https://github.com/bitrise-steplib/steps-generate-readme.git@main:
+        inputs:
+        - step_yml_path: ./step.yml

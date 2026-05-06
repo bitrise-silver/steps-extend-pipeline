@@ -1,0 +1,29 @@
+format_version: "11"
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+
+workflows:
+  test_content_input:
+    title: Test - content input
+    steps:
+    - path::./../:
+        title: Extend Pipeline
+        inputs:
+        - content: "Hello from the content input!"
+        - content_file_path: ""
+        - is_debug: "false"
+
+  test_content_file_path_input:
+    title: Test - content_file_path input
+    steps:
+    - script:
+        inputs:
+        - content: |-
+            #!/usr/bin/env bash
+            set -ex
+            echo "Hello from file!" > "$BITRISE_SOURCE_DIR/test-content.txt"
+    - path::./../:
+        title: Extend Pipeline
+        inputs:
+        - content: ""
+        - content_file_path: "$BITRISE_SOURCE_DIR/test-content.txt"
+        - is_debug: "true"

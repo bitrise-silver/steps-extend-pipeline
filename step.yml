@@ -1,0 +1,60 @@
+title: Extend Pipeline
+summary: Prints content to the Bitrise log from a string or file.
+description: |
+  This step prints content to the Bitrise log. Provide the content either
+  directly via the `content` input or by pointing to a file with
+  `content_file_path`. Exactly one of the two inputs must be specified.
+website: https://github.com/bitrise-silver/steps-extend-pipeline
+source_code_url: https://github.com/bitrise-silver/steps-extend-pipeline
+support_url: https://github.com/bitrise-silver/steps-extend-pipeline/issues
+host_os_tags:
+- osx-xcode-current
+- ubuntu-docker
+project_type_tags: []
+type_tags:
+- utility
+is_requires_admin_user: false
+is_always_run: false
+is_skippable: false
+run_if: ""
+toolkit:
+  go:
+    package_name: github.com/bitrise-silver/steps-extend-pipeline
+inputs:
+- content: null
+  opts:
+    title: Content
+    summary: The content string to print to the log.
+    description: |
+      Specify the content directly as a string. Mutually exclusive with
+      `content_file_path` — exactly one must be provided.
+    is_required: false
+    is_sensitive: false
+    is_expand: true
+- content_file_path: null
+  opts:
+    title: Content file path
+    summary: Path to a file whose contents will be printed to the log.
+    description: |
+      Path to a local file. The file's contents are read and printed to the log.
+      Mutually exclusive with `content` — exactly one must be provided.
+    is_required: false
+    is_sensitive: false
+    is_expand: true
+- pipeline_name: ""
+  opts:
+    title: Pipeline name
+    summary: Name of the pipeline to extend. Leave empty to use the current pipeline.
+    is_required: false
+    is_sensitive: false
+    is_expand: true
+- is_debug: "false"
+  opts:
+    title: Enable debug logging
+    summary: If set to true, enables debug-level log output.
+    is_required: false
+    is_sensitive: false
+    value_options:
+    - "true"
+    - "false"
+outputs: []
