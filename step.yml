@@ -1,5 +1,5 @@
 title: Extend Pipeline
-summary: Prints content to the Bitrise log from a string or file.
+summary: Extend ongoing pipline with dynamic configuration.
 description: |
   This step prints content to the Bitrise log. Provide the content either
   directly via the `content` input or by pointing to a file with
@@ -24,7 +24,7 @@ inputs:
 - content: null
   opts:
     title: Content
-    summary: The content string to print to the log.
+    summary: The content string of extended bitrise.yml
     description: |
       Specify the content directly as a string. Mutually exclusive with
       `content_file_path` — exactly one must be provided.
@@ -34,9 +34,9 @@ inputs:
 - content_file_path: null
   opts:
     title: Content file path
-    summary: Path to a file whose contents will be printed to the log.
+    summary: Path to extended bitrise.yml.
     description: |
-      Path to a local file. The file's contents are read and printed to the log.
+      Path to extended bitrise.yml. The file's contents are read and used for extending pipeline.
       Mutually exclusive with `content` — exactly one must be provided.
     is_required: false
     is_sensitive: false
